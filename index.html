@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#10111a">
+<title>KIM English</title><link rel="manifest" href="manifest.json"><link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="app">
+<header><div><b>KIM</b><small> English companion</small></div><div class="stats"><span id="level">Niv. 1</span><span>🔥 <b id="streak">1</b></span><span>⭐ <b id="xp">0</b> XP</span></div></header>
+<section id="home" class="screen active">
+<div class="hero"><div class="avatar">K</div><div><h1>Hi Payou 👋</h1><p>On apprend à parler pour de vrai. Ready?</p></div></div>
+<div class="card"><h2>Mission du jour</h2><p id="mission">Tenir une mini-conversation et utiliser 3 expressions anglaises.</p><div class="bar"><i id="progress"></i></div><small id="progressText">0 / 3 objectifs</small></div>
+<button class="primary" onclick="startSession()">🎙️ Parler avec Kim</button>
+<div class="grid"><button onclick="show('review')">🧠<b>Révisions</b><small id="reviewCount">0 à revoir</small></button><button onclick="show('quests')">🏆<b>Quêtes</b><small>Gagner des récompenses</small></button></div>
+</section>
+<section id="chat" class="screen"><div class="chatTop"><button onclick="show('home')">‹</button><div><b>Kim</b><small id="mode">50% FR · 50% EN</small></div><button onclick="endSession()">Bilan</button></div><div id="messages" class="messages"></div><div id="hint" class="hint hidden"></div><div class="actions"><button onclick="hint()">💡 Indice</button><button onclick="translateLast()">🇫🇷 Traduire</button><button onclick="speakLast()">🔊 Réécouter</button></div><div class="composer"><input id="answer" placeholder="Réponds librement…" autocomplete="off"><button id="mic" onclick="listen()">🎙️</button><button onclick="send()">➤</button></div></section>
+<section id="review" class="screen"><div class="pageTop"><button onclick="show('home')">‹</button><h2>Révisions</h2></div><div id="reviewList" class="list"></div></section>
+<section id="quests" class="screen"><div class="pageTop"><button onclick="show('home')">‹</button><h2>Quêtes</h2></div><div class="card"><b>⚡ Daily Spark</b><p>Répondre à Kim 5 fois aujourd’hui.</p><small>+50 XP</small></div><div class="card locked"><b>💎 Legendary Date</b><p>Conversation 100% anglais, sans aide.</p><small>Débloquée au niveau 5 · récompense spéciale</small></div></section>
+<section id="summary" class="screen"><div class="pageTop"><button onclick="show('home')">×</button><h2>Bilan</h2></div><div class="card center"><div class="big">+<span id="earned">0</span> XP</div><p id="summaryText"></p></div><button class="primary" onclick="show('home')">Continuer</button></section>
+</main><script src="app.js"></script>
+</body></html>
