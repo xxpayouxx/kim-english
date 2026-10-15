@@ -1,0 +1,46 @@
+name: Kim checks
+
+on:
+  push:
+    branches:
+      - main
+      - feature/kim-v0.4-microphone
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: node --check app.js
+      - name: Check static application files
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const html = fs.readFileSync('index.html', 'utf8');
+          const js = fs.readFileSync('app.js', 'utf8');
+          const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+          assert.match(html, /<script src="app\.js"><\/script>/);
+          assert.match(html, /id="mic"/);
+          assert.match(html, /id="micStatus"/);
+          assert.match(js, /function listen\(/);
+          assert.match(js, /function stopListening\(/);
+          assert.match(js, /function micStatus\(/);
+          assert.ok(manifest.name && manifest.start_url);
+          for (const file of ['index.html', 'app.js', 'style.css', 'manifest.json']) {
+            assert.ok(fs.statSync(file).size > 0, file + ' must not be empty');
+          }
+          console.log('Kim static checks passed');
+          NODE
