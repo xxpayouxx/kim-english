@@ -27,7 +27,13 @@ jobs:
       - name: REA dry-run for Codex (no changes applied)
         run: |
           npx --yes rea-agents@latest setup --client codex --dry-run
+      - name: Install REA for Codex in ephemeral runner
+        run: |
+          npx --yes rea-agents@6.5.0 setup --client codex --yes
+      - name: Diagnose REA configuration
+        run: |
+          npx --yes rea-agents@6.5.0 doctor --client codex --json
       - name: Explain next step
         run: |
-          echo "Inspection only. No REA installation, setup, or binary analysis performed."
-          echo "Review npm metadata before deciding whether to run REA dry-run."
+          echo "REA was configured only inside this disposable GitHub runner. No binary analysis performed."
+          echo "Runner is destroyed after the job; Codex is not installed or running as an AI agent here."
