@@ -1,0 +1,26 @@
+name: REA safe evaluation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Set up Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check runtime and npm metadata without installing REA
+        run: |
+          node --version
+          npm --version
+          npm view rea-agents version engines dist.tarball --json
+      - name: Explain next step
+        run: |
+          echo "Inspection only. No REA installation, setup, or binary analysis performed."
+          echo "Review npm metadata before deciding whether to run REA dry-run."
