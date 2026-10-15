@@ -24,6 +24,9 @@ jobs:
           node --version
           npm --version
           npm view rea-agents version engines dist.tarball --json
+      - name: REA dry-run for Codex (no changes applied)
+        run: |
+          npx --yes rea-agents@latest setup --client codex --dry-run
       - name: Explain next step
         run: |
           echo "Inspection only. No REA installation, setup, or binary analysis performed."
