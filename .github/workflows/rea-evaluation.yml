@@ -1,0 +1,39 @@
+name: REA safe evaluation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/rea-evaluation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Set up Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check runtime and npm metadata without installing REA
+        run: |
+          node --version
+          npm --version
+          npm view rea-agents version engines dist.tarball --json
+      - name: REA dry-run for Codex (no changes applied)
+        run: |
+          npx --yes rea-agents@latest setup --client codex --dry-run
+      - name: Install REA for Codex in ephemeral runner
+        run: |
+          npx --yes rea-agents@6.5.0 setup --client codex --yes
+      - name: Diagnose REA configuration
+        run: |
+          npx --yes rea-agents@6.5.0 doctor --client codex --json
+      - name: Explain next step
+        run: |
+          echo "REA was configured only inside this disposable GitHub runner. No binary analysis performed."
+          echo "Runner is destroyed after the job; Codex is not installed or running as an AI agent here."
