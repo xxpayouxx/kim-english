@@ -22,13 +22,13 @@ export default {
       messages.push({role:'user',content:JSON.stringify({message,previousPractice:memory.filter(x=>typeof x==='string').slice(-3).map(x=>x.slice(0,200))})});
       if (!env.AI?.run) return json({code:'LIAISON'},503);
       try {
-        const result = await env.AI.run('@cf/meta/llama-3.1-8b-instruct',{
+        const result = await env.AI.run('@cf/google/gemma-4-26b-a4b-it',{
           messages, max_tokens:420,
-          response_format:{type:'json_schema',json_schema:{
+          response_format:{type:'json_schema',json_schema:{name:'kim_reply',schema:{
             type:'object',properties:Object.fromEntries(required.map(key=>[key,{type:'string'}])),required
-          }}
+          }}}
         });
-        let data=result.response;
+        let data=result.choices?.[0]?.message?.content ?? result.response;
         if (typeof data==='string') {
           try {data=JSON.parse(data);} catch {return json({code:'FORMAT'},502);}
         }
