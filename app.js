@@ -69,10 +69,16 @@ async function send() {
   bubble('msg me',message); statusText('Kim réfléchit…');
   const timer=setTimeout(()=>controller.abort(),20000);
   let data;
+  let diagnostic="RÉSEAU";
   try {
     const response=await fetch('./api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,
       body:JSON.stringify({message,history,memory:Object.keys(db.difficult).slice(-3)})});
-    if (!response.ok) throw Error();
+    if (!response.ok) {
+      const error=await response.json().catch(()=>({}));
+      diagnostic=/^(LIAISON|FORMAT|FOURNISSEUR|IA-[0-9]{4,6})$/.test(error.code)?error.code:'HTTP '+response.status;
+      throw Error();
+    }
+    diagnostic='FORMAT';
     data=await response.json();
     if (!['en','fr','hint','translation'].every(k=>typeof data?.[k]==='string' && data[k].trim())) throw Error();
   } catch { data=null; }
@@ -86,7 +92,7 @@ async function send() {
     db.streak=db.lastDay===day(yesterday)?db.streak+1:1; db.lastDay=today;
   }
   $('#mode').textContent=data?'Conversation IA':'Exercices guidés';
-  statusText(data?'':'IA indisponible. Voici un exercice guidé.');
+  statusText(data?'':'IA indisponible ('+(controller.signal.aborted?'DÉLAI':diagnostic)+'). Voici un exercice guidé.');
   reply(data || exercises[session.turns%exercises.length]); save();
 }
 function help(text){$('#hint').textContent=text; $('#hint').classList.remove('hidden');}

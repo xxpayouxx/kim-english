@@ -20,12 +20,21 @@ export default {
         messages.push({role:turn.role,content:turn.content.slice(0,1000)});
       }
       messages.push({role:'user',content:JSON.stringify({message,previousPractice:memory.filter(x=>typeof x==='string').slice(-3).map(x=>x.slice(0,200))})});
+      if (!env.AI?.run) return json({code:'LIAISON'},503);
       try {
-        const result = await env.AI.run('@cf/meta/llama-3.1-8b-instruct',{messages,max_tokens:420});
-        const data = JSON.parse(result.response.trim().replace(/^\x60\x60\x60(?:json)?\s*|\s*\x60\x60\x60$/g,''));
-        if (!required.every(k=>typeof data[k]==='string' && data[k].length<1500 && (k==='correction'||data[k].trim()))) return json({},502);
+        const result = await env.AI.run('@cf/meta/llama-3.1-8b-instruct',{
+          messages, max_tokens:420,
+          response_format:{type:'json_schema',json_schema:{
+            type:'object',properties:Object.fromEntries(required.map(key=>[key,{type:'string'}])),required
+          }}
+        });
+        let data=result.response;
+        if (typeof data==='string') {
+          try {data=JSON.parse(data);} catch {return json({code:'FORMAT'},502);}
+        }
+        if (!data || !required.every(k=>typeof data[k]==='string' && data[k].length<1500 && (k==='correction'||data[k].trim()))) return json({code:'FORMAT'},502);
         return json(Object.fromEntries(required.map(k=>[k,data[k].trim()])));
-      } catch { return json({},503); }
+      } catch (err) { const id=String(err?.message || '').match(/\b(\d{4,6})\b/); return json({code:id?'IA-'+id[1]:'FOURNISSEUR'},503); }
     } catch { return json({},400); }
   }
 };

@@ -15,7 +15,7 @@ test('only authenticated same-origin input reaches the model',async()=>{
   assert.equal((await call({origin:'https://other.test'})).status,403);
   assert.equal((await call({body:{message:'hello'}})).status,400);
   assert.deepEqual(await (await call()).json(),result);
-  assert.equal((await call({env:{AI:{run:async()=>({response:'bad'})}}})).status,503);
+  assert.equal((await call({env:{AI:{run:async()=>({response:'bad'})}}})).status,502);
 });
 function client(fetch){
  const nodes=new Map();
@@ -37,4 +37,9 @@ test('offline fallback and late response after leaving',async()=>{
  assert.equal(c.el('#mode').textContent,'Exercices guidés');
  let finish;const d=client(()=>new Promise(resolve=>{finish=resolve}));d.run('startSession()');d.el('#answer').value='Hello';const pending=d.run('send()');
  d.run("show('home');startSession()");finish(Response.json(result));await pending;assert.equal(d.run('session.history.length'),1);assert.equal(d.run('db.xp'),0);
+});
+
+test('Cloudflare structured response and missing binding',async()=>{
+  assert.deepEqual(await (await call({env:{AI:{run:async()=>({response:result})}}})).json(),result);
+  assert.deepEqual(await (await call({env:{AI:null}})).json(),{code:'LIAISON'});
 });
