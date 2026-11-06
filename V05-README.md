@@ -1,30 +1,13 @@
-# Kim V0.5 — branche de développement
+# Kim English • préproduction personnelle
 
-Cette branche prépare l'intégration d'un service conversationnel. **La conversation IA n'est pas encore activée** : aucun serveur ni clé API n'est provisionné. La branche principale reste inchangée.
+Le Worker sert l’interface et appelle Workers AI côté serveur. En l’absence d’IA, Kim affiche explicitement le mode exercices. La progression reste dans Safari, par adresse de site. La préproduction possède donc sa propre progression. Les derniers échanges et les trois dernières difficultés sont envoyés au modèle lors d’une réponse. Les exercices fonctionnent aussi sur un hébergement statique.
 
-## Contrat de l'API
+## Test et déploiement isolé
 
-Le client envoie une requête HTTPS POST JSON à une URL de confiance configurée dans le navigateur :
+1. Utiliser uniquement un compte **Cloudflare Workers Free**, sans mise à niveau. En cas de demande de paiement, interrompre la configuration. Tarification officielle : https://developers.cloudflare.com/workers-ai/platform/pricing/
+2. Depuis cette branche, lancer `node --test tests/*.mjs`, puis `node server/build.mjs`.
+3. Dans un terminal de confiance, lancer `npx wrangler@4 login`, puis `npx wrangler@4 deploy`. Le nom du Worker est kim-english-preview. Sans mot de passe configuré, il refuse tout accès.
+4. Lancer `npx wrangler@4 secret put KIM_PASSWORD` et saisir un long mot de passe personnel aléatoire en caractères ASCII. Aucun jeton fournisseur dans le navigateur. Safari demande le nom kim et ce mot de passe personnel.
+5. Ouvrir l’adresse HTTPS fournie par Wrangler sur l’iPhone. Poser une question personnelle puis une relance, traduire la réponse, écouter les deux langues et dicter dans chacune. Vérifier les révisions après rechargement. Garder la branche principale distincte jusqu’à cette validation.
 
-```json
-{"message":"How are you?","history":[{"role":"user","content":"Hello"}],"level":1}
-```
-
-Le serveur répond :
-
-```json
-{"reply":"I'm doing well! What made you smile today?","correction":""}
-```
-
-Pour un test développeur seulement, l'URL est définie par `localStorage.setItem('kim_api_endpoint', 'https://...')`. Ne pas ajouter de clé API au JavaScript ni au localStorage. Le service doit garder les clés côté serveur, contrôler l'origine CORS, limiter les requêtes, la longueur des messages, le budget mensuel et le nombre de tokens, et filtrer les entrées de l'historique. Les limites de dépenses du fournisseur doivent aussi être configurées indépendamment.
-
-Sans URL configurée, ou si le service est indisponible, l'application conserve son mode d'exercices actuel. Le correcteur heuristique existant n'est pas une correction linguistique fiable : à remplacer lors de la mise en service du moteur IA.
-
-## À faire avant publication
-
-- Implémenter et tester un relais Cloudflare Worker et son secret API.
-- Vérifier le tarif du modèle choisi, les plafonds de facturation et le consentement avant activation.
-- Tester micro, audio et conversation sur Safari iOS.
-- Tester les réponses et erreurs du serveur, l'accessibilité et la protection des données.
-- Déployer après validation sur une branche de préproduction.
-
+Le quota gratuit est partagé avec les autres usages du compte. Une indisponibilité ou une réponse modèle mal formée fait basculer le tour en exercice guidé. Aucune redirection vers un fournisseur payant.

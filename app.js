@@ -1,2 +1,124 @@
-const conversationHistory=[];
-const $=s=>document.querySelector(s);let db=JSON.parse(localStorage.kim||'{"xp":0,"streak":1,"turns":0,"difficult":{},"mastered":{},"sessions":0}'),session={turns:0,xp:0,last:''};const lessons=[{q:"Hey! Today we keep it simple. How are you feeling right now? Réponds en anglais, même avec une phrase courte.",fr:"Comment est-ce que tu te sens maintenant ?",hint:"Try: I feel… / I'm… because…"},{q:"Nice! What did you do today? Tell me one thing.",fr:"Qu’est-ce que tu as fait aujourd’hui ? Dis-moi une chose.",hint:"Try: Today I… / I went… / I worked…"},{q:"Imagine we're having coffee. What would you like to drink, and why?",fr:"Imagine qu’on prend un café. Qu’aimerais-tu boire, et pourquoi ?",hint:"I'd like… because…"},{q:"Your turn to lead 😏 Ask me a question in English.",fr:"À toi de mener : pose-moi une question en anglais.",hint:"What do you…? / Do you like…? / Have you ever…?"}];function save(){localStorage.kim=JSON.stringify(db);render()}function render(){let lvl=Math.floor(db.xp/250)+1;$('#xp').textContent=db.xp;$('#level').textContent='Niv. '+lvl;$('#streak').textContent=db.streak;let n=Object.keys(db.difficult).length;$('#reviewCount').textContent=n+' à revoir';$('#progress').style.width=Math.min(100,session.turns/3*100)+'%';$('#progressText').textContent=Math.min(3,session.turns)+' / 3 objectifs';renderReview()}function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$('#'+id).classList.add('active');render()}function startSession(){conversationHistory.length=0;session={turns:0,xp:0,last:''};$('#messages').innerHTML='';show('chat');kim(lessons[0].q,true)}function kim(t,say=false){session.last=t;conversationHistory.push({role:'assistant',content:t});let d=document.createElement('div');d.className='msg kim';d.textContent=t;$('#messages').append(d);scroll();if(say)speak(t.replace(/[^.!?]*[À-ÿ][^.!?]*[.!?]?/g,''))}function me(t){conversationHistory.push({role:'user',content:t});let d=document.createElement('div');d.className='msg me';d.textContent=t;$('#messages').append(d);scroll()}function scroll(){$('#messages').scrollTop=$('#messages').scrollHeight}function send(){let i=$('#answer'),t=i.value.trim();if(!t)return;i.value='';me(t);analyze(t)}async function analyze(t){session.turns++;db.turns++;session.xp+=10;db.xp+=10;let words=t.toLowerCase().match(/[a-z']+/g)||[],problem=[];if(words.length<3)problem.push('Réponse très courte : essaie une phrase complète.');let french=/\b(je|suis|avec|mais|parce|que|oui|non|aujourd'hui|veux)\b/i.test(t);if(french)problem.push('Tu as utilisé du français. Pas grave : on garde l’idée et on la reformule en anglais.');let common={"i am":"I'm","i dont":"I don't","im":"I'm","i like very much":"I really like"};Object.entries(common).forEach(([a,b])=>{if(t.toLowerCase().includes(a)){db.difficult[a]=(db.difficult[a]||0)+1;problem.push('À travailler : « '+a+' » → « '+b+' »')}});if(problem.length){let c=document.createElement('div');c.className='correction';c.textContent='💡 '+problem.join(' ');$('#messages').append(c)}else{words.filter(w=>w.length>5).slice(0,2).forEach(w=>db.mastered[w]=(db.mastered[w]||0)+1)}save();const endpoint=localStorage.getItem('kim_api_endpoint');if(endpoint){try{const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:t,history:conversationHistory.slice(-12),level:Math.floor(db.xp/250)+1})});if(!response.ok)throw Error('Service indisponible');const data=await response.json();if(typeof data.reply!=='string'||!data.reply.trim()||data.reply.length>3000)throw Error('Réponse invalide');kim(data.reply,true);if(typeof data.correction==='string'&&data.correction.trim()){let box=document.createElement('div');box.className='correction';box.textContent='💡 '+data.correction;$('#messages').append(box)}return}catch(err){let box=document.createElement('div');box.className='correction';box.textContent='Connexion IA indisponible. Mode exercices activé.';$('#messages').append(box)}}let idx=session.turns%lessons.length,set=lessons[idx],praise=problem.length?'Good try. On continue 👍 ':'Nice! '+(session.turns>2?'I’m using a little more English now. ':'');setTimeout(()=>kim(praise+set.q,true),350)}function hint(){let l=lessons[session.turns%lessons.length];$('#hint').textContent='💡 '+l.hint;$('#hint').classList.remove('hidden');db.difficult['aide utilisée']=(db.difficult['aide utilisée']||0)+1;save()}function translateLast(){let l=lessons[session.turns%lessons.length];$('#hint').textContent='🇫🇷 '+l.fr;$('#hint').classList.remove('hidden')}function speakLast(){speak(session.last)}function speak(t){if(!('speechSynthesis'in window))return;let u=new SpeechSynthesisUtterance(t);u.lang='en-US';u.rate=.92;speechSynthesis.cancel();speechSynthesis.speak(u)}function listen(){let R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R){alert('La reconnaissance vocale n’est pas disponible ici. Utilise la dictée du clavier iPhone.');return}let r=new R();r.lang='en-US';r.interimResults=false;$('#mic').textContent='●';r.onresult=e=>{$('#answer').value=e.results[0][0].transcript;$('#mic').textContent='🎙️'};r.onerror=r.onend=()=>$('#mic').textContent='🎙️';r.start()}function renderReview(){let e=$('#reviewList');if(!e)return;e.innerHTML='';let a=Object.entries(db.difficult);if(!a.length)e.innerHTML='<div class="card"><b>Rien à réviser pour le moment 🎉</b><p>Les difficultés détectées pendant tes conversations apparaîtront ici.</p></div>';a.forEach(([w,n])=>{let d=document.createElement('div');d.className='card';d.innerHTML='<b>'+w+'</b><p>Détecté '+n+' fois. Réutilise-le dans une prochaine conversation.</p>';e.append(d)})}function endSession(){db.sessions++;db.xp+=session.turns>=5?50:0;let bonus=session.turns>=5?50:0;$('#earned').textContent=session.xp+bonus;$('#summaryText').textContent=session.turns+' réponses · '+Object.keys(db.difficult).length+' point(s) à retravailler'+(bonus?' · Quête quotidienne réussie !':'');save();show('summary')}$('#answer').addEventListener('keydown',e=>{if(e.key==='Enter')send()});render();
+const $ = selector => document.querySelector(selector);
+const exercises = [
+  ["How are you feeling today?", "On commence tranquillement. Raconte-moi ta journée.", "Comment te sens-tu aujourd’hui ?", "Today I feel… because…"],
+  ["What made you smile today?", "Même un petit détail m’intéresse.", "Qu’est-ce qui t’a fait sourire aujourd’hui ?", "I smiled when…"],
+  ["What would you order if we went out for coffee?", "À toi de choisir, je te suis !", "Que commanderais-tu si on allait prendre un café ?", "I'd like…"],
+  ["What are you looking forward to?", "Tu peux parler du week-end ou d’un projet.", "Qu’attends-tu avec impatience ?", "I'm looking forward to…"]
+].map(([en,fr,translation,hint])=>({en,fr,translation,hint}));
+let db = {xp:0, turns:0, streak:1, sessions:0, difficult:{}};
+try { Object.assign(db, JSON.parse(localStorage.kim || '{}')); } catch {}
+let session, request, recognition;
+const day = (date=new Date()) => date.toLocaleDateString('sv-SE');
+function save() {
+  try { localStorage.kim = JSON.stringify(db); } catch { statusText('La mémoire locale est indisponible.'); }
+  render();
+}
+function render() {
+  $('#xp').textContent = db.xp;
+  $('#level').textContent = 'Niv. '+(1+Math.floor(db.xp/250));
+  $('#streak').textContent = db.streak;
+  const count = Math.min(3,session?.turns || 0);
+  $('#progress').style.width = count/3*100+'%';
+  $('#progressText').textContent = count+' / 3 réponses';
+  const entries = Object.entries(db.difficult);
+  $('#reviewCount').textContent = entries.length+' à revoir';
+  $('#reviewList').replaceChildren();
+  if (!entries.length) $('#reviewList').textContent = 'Tes prochaines corrections apparaîtront ici.';
+  for (const [item,n] of entries.reverse()) bubble('card',item+' · '+n+' fois','#reviewList');
+}
+function statusText(text) { $('#status').textContent = text; }
+function show(id) {
+  if (id!=='chat') {
+    request?.abort(); request=null;
+    recognition?.abort(); recognition=null;
+    window.speechSynthesis?.cancel();
+  }
+  document.querySelectorAll('.screen').forEach(el=>el.classList.toggle('active',el.id===id));
+  render();
+}
+function bubble(type,text,target='#messages') {
+  const el = document.createElement('div');
+  el.className=type; el.textContent=text;
+  const list=$(target); list.append(el); list.scrollTop=list.scrollHeight;
+}
+function startSession() {
+  session={turns:0,history:[],last:null};
+  $('#messages').replaceChildren(); $('#answer').value=''; $('#submit').disabled=false;
+  $('#mode').textContent='Français · English'; statusText(''); show('chat');
+  reply(exercises[0]);
+}
+function reply(data) {
+  session.last=data;
+  const content=data.en+'\n'+data.fr;
+  session.history.push({role:'assistant',content});
+  bubble('msg kim',content); $('#hint').classList.add('hidden');
+  if (data.correction) {
+    bubble('correction',data.correction);
+    db.difficult[data.correction]=(Number(db.difficult[data.correction])||0)+1;
+  }
+  speakLast();
+}
+async function send() {
+  const message=$('#answer').value.trim();
+  if (!message || request) return;
+  recognition?.abort(); window.speechSynthesis?.cancel();
+  const controller=new AbortController(); request=controller;
+  const history=session.history.slice(-8);
+  session.history.push({role:'user',content:message});
+  $('#answer').value=''; $('#submit').disabled=true;
+  bubble('msg me',message); statusText('Kim réfléchit…');
+  const timer=setTimeout(()=>controller.abort(),20000);
+  let data;
+  try {
+    const response=await fetch('./api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,
+      body:JSON.stringify({message,history,memory:Object.keys(db.difficult).slice(-3)})});
+    if (!response.ok) throw Error();
+    data=await response.json();
+    if (!['en','fr','hint','translation'].every(k=>typeof data?.[k]==='string' && data[k].trim())) throw Error();
+  } catch { data=null; }
+  finally { clearTimeout(timer); }
+  if (request!==controller) return;
+  request=null; $('#submit').disabled=false;
+  session.turns++; db.turns++; db.xp+=10;
+  const today=day();
+  if(db.lastDay!==today){
+    const yesterday=new Date(); yesterday.setDate(yesterday.getDate()-1);
+    db.streak=db.lastDay===day(yesterday)?db.streak+1:1; db.lastDay=today;
+  }
+  $('#mode').textContent=data?'Conversation IA':'Exercices guidés';
+  statusText(data?'':'IA indisponible. Voici un exercice guidé.');
+  reply(data || exercises[session.turns%exercises.length]); save();
+}
+function help(text){$('#hint').textContent=text; $('#hint').classList.remove('hidden');}
+function hint(){help(session.last.hint);}
+function translateLast(){help(session.last.translation);}
+function speakLast(){
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  for (const [lang,text] of [['en-US',session.last.en],['fr-FR',session.last.fr]]) {
+    const voice=new SpeechSynthesisUtterance(text); voice.lang=lang;voice.rate=.94;speechSynthesis.speak(voice);
+  }
+}
+function listen(){
+  if(recognition){recognition.stop();return;}
+  const Recognizer=window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!Recognizer){statusText('Utilise le micro du clavier iPhone pour dicter.');$('#answer').focus();return;}
+  window.speechSynthesis?.cancel();
+  const mic=new Recognizer(); recognition=mic; mic.lang=$('#lang').value;
+  mic.onresult=e=>{if(recognition===mic) $('#answer').value=e.results[0][0].transcript.slice(0,800);};
+  mic.onend=()=>{if(recognition===mic) recognition=null;$('#mic').textContent='🎙️';};
+  mic.onerror=()=>{if(recognition===mic) statusText('Dictée interrompue. Tu peux utiliser le micro du clavier.');};
+  try{mic.start();$('#mic').textContent='●';statusText('');}catch{mic.onend();statusText('Utilise la dictée du clavier.');}
+}
+function endSession(){
+  if(!session || session.closed) return;
+  session.closed=true;
+  const bonus=session.turns>=5 && db.bonusDay!==day()?50:0;
+  if(bonus) db.bonusDay=day();
+  db.sessions++; db.xp+=bonus;
+  $('#earned').textContent=session.turns*10+bonus;
+  $('#summaryText').textContent=session.turns+' réponses · '+Object.keys(db.difficult).length+' points à revoir';
+  save();show('summary');
+}
+$('#answer').addEventListener('keydown',e=>{if(e.key==='Enter' && !e.isComposing) send();});
+render();
